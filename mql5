@@ -1,0 +1,83 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                                   The SIAM.mq5  |
+//|                                        https://www.forexroboteasy.com  |
+//|                                                Forex Robot Easy Team |
+//+------------------------------------------------------------------+
+
+// Input parameters
+input double StopLoss = 100; // Fixed stop loss value
+input double VirtualChannelPeriod = 20; // Period for virtual channel indicator
+input double ATRPeriod = 14; // Period for Average True Range (ATR) indicator
+input double RecoveryFactor = 1.5; // Recovery factor for profit tracking and recovery model
+
+// Global variables
+int ticket = 0; // Trade ticket number
+double virtualChannelUpper = 0; // Virtual channel upper level
+double virtualChannelLower = 0; // Virtual channel lower level
+
+// Initialization function
+void OnInit()
+{
+   // Calculate virtual channel levels
+   virtualChannelUpper = iHigh(NULL, PERIOD_H1, 1) + VirtualChannelPeriod * iATR(NULL, PERIOD_H1, ATRPeriod, 1);
+   virtualChannelLower = iLow(NULL, PERIOD_H1, 1) - VirtualChannelPeriod * iATR(NULL, PERIOD_H1, ATRPeriod, 1);
+}
+
+// Trading function
+void OnTick()
+{
+   // Check if there is an open trade
+   if (!IsTradeAllowed())
+   {
+      return;
+   }
+   
+   // Check if price is above the virtual channel upper level
+   if (Ask > virtualChannelUpper)
+   {
+      // Open a buy trade
+      ticket = OrderSend(Symbol(), OP_BUY, 1, Ask, 3, Bid - StopLoss * Point, Ask + StopLoss * Point, 'The SIAM', 0, 0, Green);
+   }
+   
+   // Check if price is below the virtual channel lower level
+   if (Bid < virtualChannelLower)
+   {
+      // Open a sell trade
+      ticket = OrderSend(Symbol(), OP_SELL, 1, Bid, 3, Ask + StopLoss * Point, Bid - StopLoss * Point, 'The SIAM', 0, 0, Red);
+   }
+}
+
+// Function to check if trade is allowed
+bool IsTradeAllowed()
+{
+   // Check if there is an open trade
+   if (ticket != 0)
+   {
+      // Check if trade is still open
+      if (!OrderSelect(ticket, SELECT_BY_TICKET))
+      {
+         // Reset ticket number
+         ticket = 0;
+         
+         // Allow new trades
+         return true;
+      }
+      
+      // Check if trade is closed
+      if (OrderCloseTime() != 0)
+      {
+         // Reset ticket number
+         ticket = 0;
+         
+         // Allow new trades
+         return true;
+      }
+      
+      // Trade is still open, do not allow new trades
+      return false;
+   }
+   
+   // Allow new trades
+   return true;
+}
